@@ -110,10 +110,12 @@ if args.vbf:
         lheTree.vq2in = ROOT.TLorentzVector(0., 0., 0., 0.)
         lheTree.vq1out = ROOT.TLorentzVector(0., 0., 0., 0.)
         lheTree.vq2out = ROOT.TLorentzVector(0., 0., 0., 0.)
+        lheTree.vqoutSum = ROOT.TLorentzVector(0., 0., 0., 0.)
         lheTree.Branch( 'vq1in', lheTree.vq1in)
         lheTree.Branch( 'vq2in', lheTree.vq2in)
         lheTree.Branch( 'vq1out', lheTree.vq1out)
         lheTree.Branch( 'vq2out', lheTree.vq2out)
+        lheTree.Branch( 'vqoutSum', lheTree.vqoutSum)
 
 ########################
 
@@ -198,6 +200,9 @@ for line in lheIn:
                 tlv_q2out = ROOT.TLorentzVector(0., 0., 0., 0.)
                 tlv_q1out.SetPxPyPzE(q1out[0],q1out[1],q1out[2],q1out[3])
                 tlv_q2out.SetPxPyPzE(q2out[0],q2out[1],q2out[2],q2out[3])
+                # tlvSum_qout = lheTree.vq1out + lheTree.vq2out
+                copy_tlv (copy_from = tlv_q1out, copy_to = tlvSum_qout)
+                tlvSum_qout += tlv_q2out
                 if args.saveTLV:
                     lheTree.vq1in.SetPxPyPzE(q1in[0],q1in[1],q1in[2],q1in[3])
                     lheTree.vq2in.SetPxPyPzE(q2in[0],q2in[1],q2in[2],q2in[3])
@@ -205,9 +210,7 @@ for line in lheIn:
                     # lheTree.vq2out.SetPxPyPzE(q2out[0],q2out[1],q2out[2],q2out[3])
                     copy_tlv (copy_from = tlv_q1out, copy_to = lheTree.vq1out)
                     copy_tlv (copy_from = tlv_q2out, copy_to = lheTree.vq2out)
-                # tlvSum_qout = lheTree.vq1out + lheTree.vq2out
-                copy_tlv (copy_from = tlv_q1out, copy_to = tlvSum_qout)
-                tlvSum_qout += tlv_q2out
+                    copy_tlv (copy_from = tlvSum_qout, copy_to = lheTree.vqoutSum)
                 # tlvSum_qout = tlv_q1out + tlv_q2out
                 jj_mass[0] = tlvSum_qout.M()
 
