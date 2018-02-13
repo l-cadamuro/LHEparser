@@ -3,6 +3,14 @@ from array import array
 
 import argparse
 
+def copy_tlv(copy_from, copy_to):
+    copy_to.SetPxPyPzE(
+        copy_from.Px(),
+        copy_from.Py(),
+        copy_from.Pz(),
+        copy_from.E(),
+    )
+
 parser = argparse.ArgumentParser(description='Command line parser of parser')
 #string opts
 parser.add_argument('--lheIn',   dest='lheIn',   help='lhe file name', default=None)
@@ -78,7 +86,7 @@ args = parser.parse_args()
 ###################### making interactive
 lheIn = open(args.lheIn)
 rootOut = ROOT.TFile.Open(args.rootOut, 'recreate')
-
+rootOut.cd()
 
 #### vars
 HH_mass = array( 'd', [ 0 ] ) ## one value
@@ -94,17 +102,18 @@ if args.saveTLV:
     lheTree.Branch( 'vH2', lheTree.vH2)
     lheTree.Branch( 'vSum', lheTree.vSum)
     
-    if args.vbf:
-            jj_mass = array( 'd', [ 0 ] ) ## one value
-            lheTree.vq1in = ROOT.TLorentzVector(0., 0., 0., 0.)
-            lheTree.vq2in = ROOT.TLorentzVector(0., 0., 0., 0.)
-            lheTree.vq1out = ROOT.TLorentzVector(0., 0., 0., 0.)
-            lheTree.vq2out = ROOT.TLorentzVector(0., 0., 0., 0.)
-            lheTree.Branch( 'jj_mass', jj_mass, 'jj_mass/D' )
-            lheTree.Branch( 'vq1in', lheTree.vq1in)
-            lheTree.Branch( 'vq2in', lheTree.vq2in)
-            lheTree.Branch( 'vq1out', lheTree.vq1out)
-            lheTree.Branch( 'vq2out', lheTree.vq2out)
+if args.vbf:
+    jj_mass = array( 'd', [ 0 ] ) ## one value
+    lheTree.Branch( 'jj_mass', jj_mass, 'jj_mass/D' )
+    if args.saveTLV:
+        lheTree.vq1in = ROOT.TLorentzVector(0., 0., 0., 0.)
+        lheTree.vq2in = ROOT.TLorentzVector(0., 0., 0., 0.)
+        lheTree.vq1out = ROOT.TLorentzVector(0., 0., 0., 0.)
+        lheTree.vq2out = ROOT.TLorentzVector(0., 0., 0., 0.)
+        lheTree.Branch( 'vq1in', lheTree.vq1in)
+        lheTree.Branch( 'vq2in', lheTree.vq2in)
+        lheTree.Branch( 'vq1out', lheTree.vq1out)
+        lheTree.Branch( 'vq2out', lheTree.vq2out)
 
 ########################
 
@@ -166,7 +175,9 @@ for line in lheIn:
             tlv1.SetPxPyPzE(H1[0],H1[1],H1[2],H1[3])
             tlv2.SetPxPyPzE(H2[0],H2[1],H2[2],H2[3])
 
-            tlvSum = tlv1 + tlv2
+            # tlvSum = tlv1 + tlv2
+            copy_tlv (copy_from = tlv1, copy_to = tlvSum)
+            tlvSum += tlv2
             # print tlvSum.Px(), tlvSum.Py(), tlvSum.Pz(), tlvSum.E()
             # print tlvSum.M()
 
@@ -177,13 +188,27 @@ for line in lheIn:
                 print 'evt num', nev
 
             HH_mass[0] = tlvSum.M()
+            if args.saveTLV:
+                copy_tlv (copy_from = tlv1, copy_to = lheTree.vH1)
+                copy_tlv (copy_from = tlv2, copy_to = lheTree.vH2)
+                copy_tlv (copy_from = tlvSum, copy_to = lheTree.vSum)
 
             if args.vbf:
-                lheTree.vq1in.SetPxPyPzE(q1in[0],q1in[1],q1in[2],q1in[3])
-                lheTree.vq2in.SetPxPyPzE(q2in[0],q2in[1],q2in[2],q2in[3])
-                lheTree.vq1out.SetPxPyPzE(q1out[0],q1out[1],q1out[2],q1out[3])
-                lheTree.vq2out.SetPxPyPzE(q2out[0],q2out[1],q2out[2],q2out[3])
-                tlvSum_qout = lheTree.vq1out + lheTree.vq2out
+                tlv_q1out = ROOT.TLorentzVector(0., 0., 0., 0.)
+                tlv_q2out = ROOT.TLorentzVector(0., 0., 0., 0.)
+                tlv_q1out.SetPxPyPzE(q1out[0],q1out[1],q1out[2],q1out[3])
+                tlv_q2out.SetPxPyPzE(q2out[0],q2out[1],q2out[2],q2out[3])
+                if args.saveTLV:
+                    lheTree.vq1in.SetPxPyPzE(q1in[0],q1in[1],q1in[2],q1in[3])
+                    lheTree.vq2in.SetPxPyPzE(q2in[0],q2in[1],q2in[2],q2in[3])
+                    # lheTree.vq1out.SetPxPyPzE(q1out[0],q1out[1],q1out[2],q1out[3])
+                    # lheTree.vq2out.SetPxPyPzE(q2out[0],q2out[1],q2out[2],q2out[3])
+                    copy_tlv (copy_from = tlv_q1out, copy_to = lheTree.vq1out)
+                    copy_tlv (copy_from = tlv_q2out, copy_to = lheTree.vq2out)
+                # tlvSum_qout = lheTree.vq1out + lheTree.vq2out
+                copy_tlv (copy_from = tlv_q1out, copy_to = tlvSum_qout)
+                tlvSum_qout += tlv_q2out
+                # tlvSum_qout = tlv_q1out + tlv_q2out
                 jj_mass[0] = tlvSum_qout.M()
 
 
