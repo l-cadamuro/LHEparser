@@ -17,6 +17,7 @@ parser.add_argument('--lheIn',   dest='lheIn',   help='lhe file name', default=N
 parser.add_argument('--rootOut', dest='rootOut', help='root out file name', default=None)
 parser.add_argument('--vbf',     dest='vbf',     help='use if this a VBF sample (store in/out parton info)', action='store_true', default=False)
 parser.add_argument('--saveTLV', dest='saveTLV', help='save TLorentzVector', action='store_true', default=False)
+parser.add_argument('--saveCM',  dest='saveCM',  help='save also quantities in the center of mass framce', action='store_true', default=False)
 
 args = parser.parse_args()
 
@@ -90,9 +91,13 @@ rootOut.cd()
 
 #### vars
 HH_mass = array( 'd', [ 0 ] ) ## one value
+costhCM = array( 'd', [ 0 ] ) ## one value
 
 lheTree = ROOT.TTree('lheTree', 'lheTree')
 lheTree.Branch( 'HH_mass', HH_mass, 'HH_mass/D' )
+
+if args.saveCM:
+    lheTree.Branch( 'costhCM', costhCM, 'costhCM/D' )
 
 if args.saveTLV:
     lheTree.vH1 = ROOT.TLorentzVector(0., 0., 0., 0.)
@@ -101,6 +106,11 @@ if args.saveTLV:
     lheTree.Branch( 'vH1', lheTree.vH1)
     lheTree.Branch( 'vH2', lheTree.vH2)
     lheTree.Branch( 'vSum', lheTree.vSum)
+    if args.saveCM:
+        lheTree.vH1_cm = ROOT.TLorentzVector(0., 0., 0., 0.)
+        lheTree.vH2_cm = ROOT.TLorentzVector(0., 0., 0., 0.)
+        lheTree.Branch( 'vH1_cm', lheTree.vH1_cm)
+        lheTree.Branch( 'vH2_cm', lheTree.vH2_cm)
     
 if args.vbf:
     jj_mass = array( 'd', [ 0 ] ) ## one value
@@ -190,6 +200,26 @@ for line in lheIn:
                 print 'evt num', nev
 
             HH_mass[0] = tlvSum.M()
+
+            ## compute the costheta* in the CM
+            if args.saveCM:
+                tlvSum_cm  = ROOT.TLorentzVector (0,0,0,0)
+                tlv1_cm    = ROOT.TLorentzVector (0,0,0,0)
+                tlv2_cm    = ROOT.TLorentzVector (0,0,0,0)
+
+                copy_tlv (copy_from = tlvSum, copy_to = tlvSum_cm)
+                copy_tlv (copy_from = tlv1,   copy_to = tlv1_cm)
+                copy_tlv (copy_from = tlv2,   copy_to = tlv2_cm)
+                boostv = tlvSum.BoostVector();
+                tlvSum_cm.Boost(-boostv);
+                tlv1_cm.Boost(-boostv);
+                tlv2_cm.Boost(-boostv);
+                
+                costhCM[0] = tlv1_cm.CosTheta()
+                if args.saveTLV:
+                    copy_tlv (copy_from = tlv1_cm, copy_to = lheTree.vH1_cm)
+                    copy_tlv (copy_from = tlv2_cm, copy_to = lheTree.vH2_cm)
+
             if args.saveTLV:
                 copy_tlv (copy_from = tlv1, copy_to = lheTree.vH1)
                 copy_tlv (copy_from = tlv2, copy_to = lheTree.vH2)
